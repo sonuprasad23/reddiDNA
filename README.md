@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="frontend/public/logo.png" alt="ReddiDNA Logo" width="120" />
+  <img src="public/logo.png" alt="ReddiDNA Logo" width="120" />
   <h1>ReddiDNA</h1>
   <p><b>Extracting the digital DNA of Reddit users.</b></p>
   <p>An AI-powered application that generates a detailed user persona from public Reddit activity.</p>
