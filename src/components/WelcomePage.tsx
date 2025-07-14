@@ -3,19 +3,43 @@ import { useNavigate } from 'react-router-dom';
 import { Users, PieChart, BarChart, Target } from 'lucide-react';
 
 const WelcomePage = ({ onGeneratePersona }: { onGeneratePersona: (username: string) => void; }) => {
-  const [username, setUsername] = useState('');
+  const [profileUrl, setProfileUrl] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) {
-      setError('Please enter a Reddit username');
-      return;
+    setError('');
+
+    // --- URL Validation and Username Extraction Logic ---
+    try {
+      if (!profileUrl.trim()) {
+        throw new Error('Please enter a Reddit profile link.');
+      }
+      
+      const url = new URL(profileUrl);
+
+      if (url.hostname !== 'www.reddit.com' && url.hostname !== 'reddit.com') {
+        throw new Error('Please enter a valid Reddit.com URL.');
+      }
+
+      const pathParts = url.pathname.split('/').filter(part => part);
+      
+      if (pathParts.length < 2 || pathParts[0] !== 'user') {
+        throw new Error('URL must be a valid user profile link (e.g., reddit.com/user/username).');
+      }
+
+      const username = pathParts[1];
+      onGeneratePersona(username);
+      navigate('/results');
+
+    } catch (err: any) {
+      if (err instanceof TypeError) {
+         setError('Please enter a valid and complete URL (e.g., https://www.reddit.com/...).');
+      } else {
+         setError(err.message);
+      }
     }
-    const cleanedUsername = username.replace(/^u\//, '');
-    onGeneratePersona(cleanedUsername);
-    navigate('/results');
   };
 
   return (
@@ -23,33 +47,29 @@ const WelcomePage = ({ onGeneratePersona }: { onGeneratePersona: (username: stri
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            {/* FIX: Removed the import, using absolute path from /public */}
-            <img src="/logo.png" alt="ReddiDNA Logo" className="h-32 w-32" />
+            <img src="/logo.png" alt="ReddiDNA Logo" className="h-24 w-24" />
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
             Welcome to ReddiDNA
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Extracting the digital DNA of Reddit users. Enter any Reddit username
-            to generate a comprehensive AI-powered persona.
+            Extracting the digital DNA of Reddit users. Enter any Reddit profile
+            link to generate a comprehensive AI-powered persona.
           </p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6 md:p-8 mb-12">
           <form onSubmit={handleSubmit} className="flex flex-col items-center">
-            <div className="w-full max-w-md mb-6">
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                Reddit Username (without u/)
+            <div className="w-full max-w-lg mb-4">
+              <label htmlFor="profileUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                Reddit User Profile Link
               </label>
               <input
                 type="text"
-                id="username"
-                value={username}
-                onChange={e => {
-                  setUsername(e.target.value);
-                  setError('');
-                }}
-                placeholder="e.g., kojied"
+                id="profileUrl"
+                value={profileUrl}
+                onChange={e => setProfileUrl(e.target.value)}
+                placeholder="e.g., https://www.reddit.com/user/kojied/"
                 className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
               {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
