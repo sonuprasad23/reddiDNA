@@ -1,45 +1,61 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, PieChart, BarChart, Target } from 'lucide-react';
+import logo from '../assets/logo.png'; // Make sure your logo is at public/logo.png
 
-const WelcomePage = ({ onGeneratePersona }: { onGeneratePersona: (username: string) => void; }) => {
-  const [profileUrl, setProfileUrl] = useState('');
+interface WelcomePageProps {
+  onGeneratePersona: (username: string) => void;
+}
+
+// --- NEW: Smart username extraction function ---
+const extractUsername = (input: string): string => {
+  try {
+    // Case 1: Mobile Share URL (e.g., /u/username/s/...)
+    const mobileMatch = input.match(/\/u\/([^\/]+)/);
+    if (mobileMatch && mobileMatch[1]) {
+      return mobileMatch[1];
+    }
+    
+    // Case 2: Desktop URL (e.g., /user/username/)
+    const desktopMatch = input.match(/\/user\/([^\/]+)/);
+    if (desktopMatch && desktopMatch[1]) {
+      return desktopMatch[1];
+    }
+
+    // Case 3: Plain username (with potential "u/" prefix)
+    // This will handle "kojied" and "u/kojied"
+    const cleanedInput = input.trim().replace(/^u\//, '');
+    return cleanedInput;
+
+  } catch (error) {
+    // Fallback in case of unexpected input
+    return input.trim();
+  }
+};
+
+
+const WelcomePage = ({ onGeneratePersona }: WelcomePageProps) => {
+  const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
-    // --- URL Validation and Username Extraction Logic ---
-    try {
-      if (!profileUrl.trim()) {
-        throw new Error('Please enter a Reddit profile link.');
-      }
-      
-      const url = new URL(profileUrl);
-
-      if (url.hostname !== 'www.reddit.com' && url.hostname !== 'reddit.com') {
-        throw new Error('Please enter a valid Reddit.com URL.');
-      }
-
-      const pathParts = url.pathname.split('/').filter(part => part);
-      
-      if (pathParts.length < 2 || pathParts[0] !== 'user') {
-        throw new Error('URL must be a valid user profile link (e.g., reddit.com/user/username).');
-      }
-
-      const username = pathParts[1];
-      onGeneratePersona(username);
-      navigate('/results');
-
-    } catch (err: any) {
-      if (err instanceof TypeError) {
-         setError('Please enter a valid and complete URL (e.g., https://www.reddit.com/...).');
-      } else {
-         setError(err.message);
-      }
+    if (!inputValue.trim()) {
+      setError('Please enter a Reddit username or profile URL');
+      return;
     }
+
+    // Use the new smart extraction function
+    const username = extractUsername(inputValue);
+    
+    if (!username) {
+        setError('Could not extract a valid username from the input.');
+        return;
+    }
+
+    onGeneratePersona(username);
+    navigate('/results');
   };
 
   return (
@@ -53,23 +69,26 @@ const WelcomePage = ({ onGeneratePersona }: { onGeneratePersona: (username: stri
             Welcome to ReddiDNA
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Extracting the digital DNA of Reddit users. Enter any Reddit profile
-            link to generate a comprehensive AI-powered persona.
+            Extracting the digital DNA of Reddit users. Enter any Reddit username or profile URL
+            to generate a comprehensive AI-powered persona.
           </p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6 md:p-8 mb-12">
           <form onSubmit={handleSubmit} className="flex flex-col items-center">
-            <div className="w-full max-w-lg mb-4">
-              <label htmlFor="profileUrl" className="block text-sm font-medium text-gray-700 mb-2">
-                Reddit User Profile Link
+            <div className="w-full max-w-xl mb-6">
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                Enter Reddit Username or Profile URL
               </label>
               <input
                 type="text"
-                id="profileUrl"
-                value={profileUrl}
-                onChange={e => setProfileUrl(e.target.value)}
-                placeholder="e.g., https://www.reddit.com/user/kojied/"
+                id="username"
+                value={inputValue}
+                onChange={e => {
+                  setInputValue(e.target.value);
+                  setError('');
+                }}
+                placeholder="e.g., kojied  OR  https://www.reddit.com/user/kojied/"
                 className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
               {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
